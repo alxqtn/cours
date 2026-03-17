@@ -27,11 +27,17 @@ jobs:
         with:
           tool: presenterm@0.16.1
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - run: npm install -g @mermaid-js/mermaid-cli
+
       - name: Export slides to HTML
         run: |
           mkdir -p dist
           for f in presenterm/*.md; do
-            presenterm --export-html --output "dist/$(basename "$f" .md).html" "$f"
+            presenterm --config-file presenterm/ci-config.yaml --export-html --output "dist/$(basename "$f" .md).html" "$f"
           done
           cp presenterm/index.html dist/
 
