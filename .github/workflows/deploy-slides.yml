@@ -33,6 +33,15 @@ jobs:
 
       - run: npm install -g @mermaid-js/mermaid-cli
 
+      - name: Wrap mmdc to add --no-sandbox for headless CI
+        run: |
+          echo '{"args":["--no-sandbox"]}' > /tmp/puppeteer-config.json
+          MMDC=$(which mmdc)
+          mv "$MMDC" "${MMDC}-real"
+          printf '#!/bin/sh\nexec "%s-real" --puppeteerConfigFile /tmp/puppeteer-config.json "$@"\n' "$MMDC" \
+            > "$MMDC"
+          chmod +x "$MMDC"
+
       - name: Export slides to HTML
         run: |
           mkdir -p dist
