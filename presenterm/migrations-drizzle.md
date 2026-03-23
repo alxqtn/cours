@@ -200,23 +200,18 @@ Comment choisir ?
 =================
 
 ```
-Vous avez des données utilisateurs
-à ne pas perdre en production ?
-            │
-     ┌──────┴──────┐
-    NON            OUI
-     │              │
-     ▼              ▼
-  push          generate
-  suffit         + migrate
-     │              │
-     ▼              ▼
-Prototype,     Équipe, staging,
+Prototype,    Équipe, staging,
 solo, local    prod, CI/CD
+     │              │
+     ▼              ▼
+   push        generate
+  suffit       + migrate
 ```
 
-Les deux approches **peuvent coexister** :
+Les deux approches peuvent coexister :
 - `push` en local pour itérer
 - `generate` + `migrate` pour les envs partagés
+
+En pratique, pour moi si vous devez générer des migrations, autant les utiliser aussi pour l'environnement local, ça permet d'avoir des environnements cohérents.
 
 <!-- speaker_note: "Heuristic simple pour choisir. Insister : ces deux modes cohabitent, ce n'est pas l'un ou l'autre." -->
