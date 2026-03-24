@@ -1,0 +1,23 @@
+{
+  "name": "auth-express-jwt",
+  "version": "1.0.0",
+  "description": "Educational demo: JWT authentication with Express and SQLite",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "dev": "tsx watch src/server.ts",
+    "test": "node --import tsx --test src/server.test.ts"
+  },
+  "dependencies": {
+    "express": "^5.0.1",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
