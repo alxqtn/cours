@@ -3,8 +3,6 @@ title: "**Authentification**"
 sub_title: "Comment ça marche vraiment"
 theme:
   name: catppuccin-latte
-options:
-  incremental_lists: true
 ---
 
 <!-- end_slide -->
@@ -253,11 +251,11 @@ const valide = await bcrypt.compare("hunter2", hash) // true ou false
 Partie 3
 ========
 
-## Les deux approches d'authentification
+## Cookies ou pas?
 
 <!-- end_slide -->
 
-Deux grandes approches
+Comment passer l'information entre le back et le front
 =======================
 
 <!-- pause -->
@@ -265,7 +263,7 @@ Deux grandes approches
 ```mermaid +render
 flowchart TD
     Q{"Front et back\nsur le même domaine ?"}
-    Q -->|Oui| A["🍪 Cookies + Session"]
+    Q -->|Oui| A["🍪 Cookies"]
     Q -->|Non\ncross-domaine ou mobile| B["🔑 JWT / Bearer Token"]
     style A fill:#40a02b,color:#fff
     style B fill:#fe640b,color:#fff
@@ -283,10 +281,10 @@ Pareillement, sur **mobile**, il n'y a pas de navigateur → pas de gestion de c
 
 <!-- jump_to_middle -->
 
-Branche 1
+Quand c'est possible
 =========
 
-## Cookies & Sessions
+## Cookies
 
 <!-- end_slide -->
 
@@ -352,127 +350,38 @@ document.cookie // "" — mais envoyé automatiquement dans les requêtes HTTP
 
 <!-- end_slide -->
 
-Le mécanisme Session
-=====================
+Cookie — signé avec un secret serveur
+======================================
 
-Un cookie seul ne suffit pas — les données sensibles ne doivent pas voyager
-
-```mermaid +render
-sequenceDiagram
-    autonumber
-    actor U as Utilisateur
-    participant N as Navigateur
-    participant S as Serveur
-    participant R as Mémoire / Redis / BDD
-
-    U->>N: Login (email + mdp)
-    N->>S: POST /login
-    S->>S: Vérifie le mot de passe (bcrypt)
-    S->>R: Crée session { userId: 42, role: "admin" }
-    Note over R: Clé: "sess:abc123"
-    S->>N: Set-Cookie: session_id=abc123 (signé, HttpOnly)
-    N->>U: Connecté ✓
-
-    Note over U,R: Requête suivante
-    U->>N: Accède à /profil
-    N->>S: GET /profil + Cookie: session_id=abc123
-    S->>S: Vérifie la signature du cookie
-    S->>R: Récupère session "sess:abc123"
-    R->>S: { userId: 42, role: "admin" }
-    S->>N: Réponse personnalisée
-```
-
-<!-- end_slide -->
-
-Session : ce qui est stocké où
-================================
-
-<!-- column_layout: [1, 1] -->
-
-<!-- column: 0 -->
-
-**Dans le cookie** (côté client)
-
-```
-session_id=abc123xyz.signature
-```
-
-- Juste un **identifiant** aléatoire
-- Signé avec un secret serveur (HMAC)
-- Si falsifié → signature invalide → rejeté
-
-<!-- column: 1 -->
-
-**En mémoire / Redis / BDD** (côté serveur)
-
-```json
-// à l'adresse abc123xyz
-{
-  "userId": 42,
-  "role": "admin",
-  "createdAt": "2025-03-24T10:00:00Z"
-}
-```
-
-- Les vraies données
-- Jamais exposées au client/front
-- **Révocable** instantanément
-
-<!-- reset_layout -->
+Le navigateur renvoie le cookie tel quel — comment le serveur sait-il qu'il l'a bien émis ?
 
 <!-- pause -->
 
-> **Pourquoi pas juste la mémoire du serveur ?**
-> Au redémarrage ou au déploiement, la mémoire est vidée → tous les utilisateurs déconnectés
-> Avec plusieurs serveurs, chacun a sa propre mémoire → selon le serveur qui répond, la session est introuvable
-> → Solution : un stockage **externe** — Redis (cache) ou base de données (ex: Better Auth stocke les sessions dans Postgres)
-
-<!-- end_slide -->
-
-Expiration — Sessions
-======================
-
-Les sessions ont **deux niveaux d'expiration** :
-
-<!-- pause -->
-
-**Le cookie** (côté client)
+Il **signe** la valeur avec son secret (HMAC) avant de l'envoyer :
 
 ```http
-Set-Cookie: session_id=abc123; Max-Age=86400
+Set-Cookie: session_id=abc123xyz.f7a3b2c1d4e5...
 ```
 
-Après expiration, le navigateur ne l'envoie plus
+Après le `.` → une **signature** calculée par le serveur avec son secret
 
 <!-- pause -->
 
-**La session** (côté serveur)
-
-```typescript
-// Express + express-session
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  cookie: { maxAge: 86400000 }, // 24h
-  // La session est invalidée côté serveur après 24h aussi
-}))
-```
+Quand le navigateur renvoie le cookie, le serveur :
+1. Recalcule la signature sur `abc123xyz` avec son secret
+2. Compare avec celle reçue — si elles ne correspondent pas, la requête est rejetée
 
 <!-- pause -->
 
-> Si le cookie expire **avant** la session → utilisateur déconnecté, session fantôme en mémoire
-> Si la session expire **avant** le cookie → cookie arrivé mais rien côté serveur → rejeté
-> Idéalement, les deux sont **alignés**
-
-<!-- pause -->
-
-La session peut être **révoquée manuellement** (déconnexion, changement de mdp) en la supprimant
+> Le secret ne quitte jamais le serveur
+> Sans lui, impossible de forger une signature valide → impossible de se faire passer pour quelqu'un d'autre
 
 <!-- end_slide -->
 
 <!-- jump_to_middle -->
 
-Branche 2
-=========
+L'alternative fréquente
+=======================
 
 ## JWT / Bearer Token
 
@@ -539,6 +448,7 @@ Où stocker un JWT ?
 ====================
 
 `localStorage` est un espace de stockage **dans le navigateur**, propre à chaque site
+
 Chaque domaine dispose du sien — `monsite.com` ne peut pas lire celui de `autresite.com`
 
 ```javascript
@@ -565,64 +475,157 @@ localStorage.removeItem("token")
 
 <!-- end_slide -->
 
-Expiration d'un JWT
-====================
+<!-- jump_to_middle -->
 
-Le JWT contient sa propre date d'expiration dans le payload :
-
-```json
-{
-  "userId": 42,
-  "exp": 1711276800
-}
-```
-
-<!-- pause -->
-
-Le serveur **vérifie `exp` à chaque requête** — si dépassé, token rejeté
-
-<!-- pause -->
-
-**Problème de révocation :**
-
-Les JWT sont **stateless** — le serveur ne garde aucune trace
-
-Si un token est volé, il reste valide jusqu'à son expiration
-
-<!-- pause -->
-
-> Solution : **courte durée de vie** (~15 minutes)
-> Inconvénient : l'utilisateur doit se reconnecter souvent
-> Compromis : les **Refresh Tokens**
-
-<!-- pause -->
-
-**Refresh Token en bref :**
-- Access token court (~15min) + Refresh token long (~7j)
-- Quand l'access token expire → le client échange le refresh token contre un nouveau
-- La **rotation** invalide l'ancien refresh token à chaque usage → limite la fenêtre d'attaque
+Partie 4 / La session
+======================
 
 <!-- end_slide -->
 
-Comparatif Sessions vs JWT
-===========================
+Que contient le token ou le cookie ?
+=====================================
 
-| | Sessions + Cookies | JWT / Bearer |
-|---|---|---|
-| **Stockage** | Serveur (Redis, BDD…) | Client (localStorage) |
-| **Révocation** | ✅ Instantanée | ❌ Attendre l'expiration |
-| **Scalabilité** | Stockage externe requis | ✅ Stateless |
-| **Multi-domaine** | ❌ Bloqué par SameSite | ✅ Natif |
-| **Mobile** | ❌ Pas de cookies auto | ✅ Header manuel |
-| **Sécurité XSS** | ✅ HttpOnly | ❌ localStorage exposé |
-| **Complexité** | Faible | Moyenne |
-| **Cas typique** | App web monolithique | API, SPA cross-domaine, mobile |
+**Le réflexe** — on y met directement l'identifiant utilisateur
+
+```json
+{ "userId": 42, "role": "admin", "exp": 1711276800 }
+```
+
+- ✅ Rien à stocker côté serveur
+- ✅ Signé → impossible à forger
+- ❌ Contient une vraie info si intercepté (`userId` = vraie ressource dans le système)
+- ❌ Presque impossible à révoquer → l'expiration doit être courte
+
+<!-- pause -->
+
+**La session** — on y met un identifiant de session
+
+```json
+{ "sessionId": "abc123" }
+```
+
+L'ID est aléatoire — sans les données côté serveur (mémoire, BDD, Redis), il ne signifie rien
+
+- ❌ Nécessite de stocker dans une table ou un cache
+- ✅ Révocable instantanément
+- ✅ Les données ne voyagent jamais
+
+<!-- pause -->
+
+> Avec les **cookies** → presque toujours avec session (Express Session, Better Auth)
+> Avec le **bearer/JWT** → moins systématique, mais possible — Better Auth le fait
+
+<!-- end_slide -->
+
+Le mécanisme Session
+=====================
+
+Un cookie seul ne suffit pas — les données sensibles ne doivent pas voyager
+
+```mermaid +render
+sequenceDiagram
+    autonumber
+    actor U as Utilisateur
+    participant N as Navigateur
+    participant S as Serveur
+    participant R as Mémoire / BDD / Redis
+
+    U->>N: Login (email + mdp)
+    N->>S: POST /login
+    S->>S: Vérifie le mot de passe (bcrypt)
+    S->>R: Crée session { userId: 42, role: "admin" }
+    Note over R: Clé: "sess:abc123"
+    S->>N: Set-Cookie: session_id=abc123.signature
+    N->>U: Connecté ✓
+
+    Note over U,R: Requête suivante
+    U->>N: Accède à /profil
+    N->>S: GET /profil + Cookie: session_id=abc123.signature
+    S->>S: Vérifie la signature
+    S->>R: Récupère session "sess:abc123"
+    R->>S: { userId: 42, role: "admin" }
+    S->>N: Réponse personnalisée
+```
+
+<!-- end_slide -->
+
+Session : ce qui est stocké où
+================================
+
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+
+**Dans le token** (côté client)
+
+```
+session_id=abc123xyz.signature
+```
+
+- Juste un **identifiant** aléatoire
+- Signé avec un secret serveur (HMAC)
+- Si falsifié → signature invalide → rejeté
+
+<!-- column: 1 -->
+
+**Dans la session** (côté serveur)
+
+```json
+// à l'adresse abc123xyz
+{
+  "userId": 42,
+  "role": "admin",
+  "createdAt": "2025-03-24T10:00:00Z"
+}
+```
+
+- Les vraies données
+- Jamais exposées au client/front
+- **Révocable** instantanément
+
+<!-- reset_layout -->
+
+<!-- pause -->
+
+**Stocker la session en mémoire ?**
+
+C'est suffisant sur un environnement local, mais en pratique :
+
+- Au redémarrage ou au re-déploiement, la mémoire est vidée → tous les utilisateurs déconnectés
+- Avec plusieurs serveurs, chacun a sa propre mémoire → selon le serveur qui répond, la session est introuvable
+
+→ Solution : un stockage **externe** — base de données (ex: Better Auth stocke les sessions dans Postgres) ou Redis (plus rapide, quand c'est important)
+
+<!-- end_slide -->
+
+Expiration et révocation
+=========================
+
+Les tokens ont une **durée de vie** — définie à la création
+
+<!-- pause -->
+
+## Sans les sessions
+
+Dans le payload JWT (`exp`) ou le `Expires/Max-Age` du cookie
+
+- Délai dépassé: Le serveur rejette le token JWT, le cookie "disparaît"
+- Presque impossible à révoquer avant : si volé, il reste valide jusqu'à expiration
+
+<!-- pause -->
+
+## Avec une **session**
+
+Expiration côté serveur + durée de vie du token/cookie
+
+- Les deux devraient être alignés. Si un seul des deux a expiré, déconnexion
+- Révocable à tout moment — déconnexion, changement de mot de passe, token compromis
 
 <!-- end_slide -->
 
 <!-- jump_to_middle -->
 
-Partie 4
+Partie 5
 ========
 
 ## L'écosystème
@@ -657,10 +660,6 @@ sequenceDiagram
     A->>U: Connecté ✓
 ```
 
-<!-- pause -->
-
-> On ne stocke **aucun mot de passe** — on fait confiance à Google/GitHub
-> On récupère uniquement une **identité vérifiée**
 
 <!-- end_slide -->
 
@@ -702,41 +701,52 @@ better-auth.session_token = abc123...
 
 <!-- end_slide -->
 
-Récap — Les trois mécanismes cryptographiques
-==============================================
+Alternatives à Better Auth
+============================
+
+Plusieurs approches existent selon vos besoins :
+
+<!-- pause -->
+
+## 1. Faire soi-même
+
+Implémenter avec `bcrypt` + cookies/JWT directement pour mieux retenir comment ça marche, mais c'est long la premières fois.
+
+<!-- pause -->
+
+## 2. Bibliothèque
+
+Des librairies similaires à **Better Auth**: Auth.js, Lucia, Supabase Auth (si vous utilisez déjà Supabase).
+
+<!-- pause -->
+
+## 3. Service managé — le plus rapide à mettre en place
+
+**Clerk / Kinde** — Un service externe qui s'occupe de tout : UI de connexion, base de données, emails…
+
+Trade-off : payant à partir d'un certain usage (~10-50k utilisateurs), dépendance externe
+
+<!-- end_slide -->
+
+Récap — mécanismes cryptographiques vus dans ce cours
+=======================================================
 
 <!-- pause -->
 
 ```mermaid +render
 flowchart TD
+    E["🟢 Chiffrement\nAES, RSA"]
     H["🔴 Hashing\nbcrypt, argon2"]
     S["🟡 Signature\nHMAC-SHA256"]
-    E["🟢 Chiffrement\nAES, RSA"]
 
-    H --> H1["Irréversible\nStockage de mots de passe"]
-    S --> S1["Vérifiable, non-secret\nJWT, cookie de session"]
-    E --> E1["Réversible avec clé\nHTTPS, JWE (rare)"]
+    E --> E1["✅ Réversible avec clé\nGarantit la confidentialité\nHTTPS"]
+    H --> H1["❌ Irréversible\nGarantit l'intégrité\nStockage de mots de passe"]
+    S --> S1["Lisible, signé via un secret\nGarantit l'authenticité\nJWT, cookies de session"]
 
+    style E fill:#40a02b,color:#fff
     style H fill:#d20f39,color:#fff
     style S fill:#df8e1d,color:#fff
-    style E fill:#40a02b,color:#fff
 ```
-
-<!-- pause -->
-
-| | Hash | Signature | Chiffrement |
-|---|---|---|---|
-| **Réversible ?** | ❌ | ❌ | ✅ (avec clé) |
-| **Contenu lisible ?** | Non (empreinte) | ✅ Oui | ❌ Non |
-| **Garantit** | Intégrité du mdp | Authenticité | Confidentialité |
-| **Utilisé pour** | Mots de passe | JWT, cookies | HTTPS, données sensibles |
-
-<!-- end_slide -->
-
-<!-- jump_to_middle -->
-
-En résumé
-=========
 
 <!-- end_slide -->
 
@@ -745,15 +755,11 @@ Ce qu'on a vu
 
 <!-- incremental_lists: true -->
 
-- HTTP est **stateless** — chaque requête est isolée, sans fil conducteur
-- On ne fait **jamais confiance au front** pour s'auto-identifier
+- On ne fait **jamais confiance au front** pour l'identité, on lui demande de nous renvoyer l'information "signée"
 - Les mots de passe sont **hashés** (bcrypt) — jamais stockés en clair
-- **Cookies + Session** : stockage serveur, révocation instantanée, same-site
-- **JWT / Bearer** : stateless, cross-domaine, mobile, révocation difficile
-- Le choix dépend de votre architecture — **pas de solution universelle**
-- **OAuth** délègue l'authentification — on ne gère pas les mots de passe
+- Le **transport** du token : cookie (automatique, same-site) ou header Authorization (manuel, cross-domaine, mobile)
+- Le **contenu** du token : userId directement (pas de stockage serveur, mais difficile à révoquer) ou ID de session (révocable, données côté serveur)
+- **OAuth** délègue l'authentification — on ne gère pas les mots de passe ou la vérification d'identité en général
 - Better Auth fait tout ça pour vous — maintenant vous savez ce qu'il y a dedans
 
 <!-- incremental_lists: false -->
-
-<!-- end_slide -->
