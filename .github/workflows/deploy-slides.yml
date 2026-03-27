@@ -4,8 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - "presenterm/**"
+      - "slides/**"
+      - "diagrams/**"
       - ".github/workflows/deploy-slides.yml"
+      - ".github/deploy-config/**"
   workflow_dispatch:
 
 permissions:
@@ -45,10 +47,17 @@ jobs:
       - name: Export slides to HTML
         run: |
           mkdir -p dist
-          for f in presenterm/*.md; do
-            presenterm --config-file presenterm/ci-config.yaml --export-html --output "dist/$(basename "$f" .md).html" "$f"
+          for f in slides/*.md; do
+            presenterm --config-file .github/deploy-config/ci-config.yaml --export-html --output "dist/$(basename "$f" .md).html" "$f"
           done
-          cp presenterm/index.html dist/
+
+      - name: Copy diagrams
+        run: cp diagrams/*.svg dist/ 2>/dev/null || true
+
+      - uses: denoland/setup-deno@v2
+
+      - name: Generate index.html
+        run: deno run --allow-read --allow-write .github/deploy-config/generate-index.ts
 
       - uses: actions/upload-pages-artifact@v3
         with:

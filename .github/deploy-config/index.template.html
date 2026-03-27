@@ -6,7 +6,8 @@
   <title>Cours</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 600px; margin: 4rem auto; padding: 0 1rem; }
-    h1 { margin-bottom: 2rem; }
+    h1, h2 { margin-bottom: 1.5rem; }
+    h2 { margin-top: 2.5rem; }
     ul { list-style: none; padding: 0; }
     li { margin: 0.75rem 0; }
     a { font-size: 1.1rem; color: #0969da; text-decoration: none; }
@@ -14,10 +15,19 @@
   </style>
 </head>
 <body>
-  <h1>Slides</h1>
+  <h2>Slides</h2>
   <ul>
-    <li><a href="ci-cd.html">CI/CD avec GitHub Actions</a></li>
-    <li><a href="drizzle.html">Drizzle</a></li>
+<% slides.forEach(slide => { -%>
+    <li><a href="<%= slide.file %>"><%= slide.name %></a></li>
+<% }) -%>
   </ul>
+<% if (diagrams.length > 0) { -%>
+  <h2>Diagrams</h2>
+  <ul>
+<% diagrams.forEach(diagram => { -%>
+    <li><a href="<%= diagram.file %>"><%= diagram.name %></a></li>
+<% }) -%>
+  </ul>
+<% } -%>
 </body>
 </html>
