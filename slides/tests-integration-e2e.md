@@ -677,3 +677,145 @@ Bloquer le déploiement si un niveau échoue.
 
 > Une bonne suite de tests doit pouvoir servir de **documentation**.
 > Si un·e nouveau·elle dev lit vos tests, il·elle comprend ce que le code est censé faire.
+
+<!-- end_slide -->
+
+<!-- jump_to_middle -->
+
+Quiz — Vérifions les acquis
+============================
+
+<!-- end_slide -->
+
+Quiz — Question 1
+==================
+
+**Quel type de test utiliserait un mock pour remplacer un appel à la base de données ?**
+
+<!-- pause -->
+
+- A) Test E2E
+- B) Test unitaire
+- C) Test d'intégration
+- D) Aucun — on ne mocke jamais la base
+
+<!-- pause -->
+
+> **Réponse : B) Test unitaire**
+> Les tests unitaires isolent le code de ses dépendances externes.
+> Les tests d'intégration utilisent une vraie base (de test).
+
+<!-- end_slide -->
+
+Quiz — Question 2
+==================
+
+**Pourquoi les tests E2E sont-ils placés en haut de la pyramide ?**
+
+<!-- pause -->
+
+- A) Parce qu'ils sont les plus importants
+- B) Parce qu'ils sont les plus rapides
+- C) Parce qu'ils sont les plus coûteux et doivent rester peu nombreux
+- D) Parce qu'ils doivent être exécutés en premier
+
+<!-- pause -->
+
+> **Réponse : C) Parce qu'ils sont les plus coûteux et doivent rester peu nombreux**
+> Lents, fragiles, difficiles à débugger — on les réserve aux parcours critiques.
+
+<!-- end_slide -->
+
+Quiz — Question 3
+==================
+
+**Quel est le problème avec ce test ?**
+
+```javascript
+let userId;
+
+test("crée un user", async () => {
+  const res = await createUser();
+  userId = res.id;
+});
+
+test("supprime le user", async () => {
+  await deleteUser(userId);
+});
+```
+
+<!-- pause -->
+
+- A) Le test est trop long
+- B) Les tests sont interdépendants — le test 2 dépend du test 1
+- C) Il manque un `expect()`
+- D) Il faudrait utiliser Playwright
+
+<!-- pause -->
+
+> **Réponse : B) Les tests sont interdépendants**
+> Chaque test doit être autonome. Si le test 1 échoue ou s'exécute après, le test 2 casse.
+
+<!-- end_slide -->
+
+Quiz — Question 4
+==================
+
+**Pour tester la route `POST /users` avec une vraie base de données, quel type de test choisir ?**
+
+<!-- pause -->
+
+- A) Test unitaire
+- B) Test E2E avec Playwright
+- C) Test d'intégration avec Supertest
+- D) Test manuel
+
+<!-- pause -->
+
+> **Réponse : C) Test d'intégration avec Supertest**
+> On teste route + service + base, sans avoir besoin d'un navigateur.
+
+<!-- end_slide -->
+
+Quiz — Question 5
+==================
+
+**Quel est l'ordre d'exécution recommandé en CI ?**
+
+<!-- pause -->
+
+- A) E2E → Intégration → Unitaires
+- B) Unitaires → E2E → Intégration
+- C) Unitaires → Intégration → E2E
+- D) Peu importe, ils sont tous indépendants
+
+<!-- pause -->
+
+> **Réponse : C) Unitaires → Intégration → E2E**
+> Du plus rapide au plus lent — on échoue vite si quelque chose est cassé.
+
+<!-- end_slide -->
+
+Quiz — Question 6
+==================
+
+**Pourquoi utiliser `data-testid="submit-btn"` plutôt qu'un sélecteur CSS comme `.btn-primary` ?**
+
+<!-- pause -->
+
+- A) C'est plus joli dans le code
+- B) Les sélecteurs CSS sont plus lents
+- C) Un refacto CSS ne cassera pas les tests E2E
+- D) Playwright ne supporte pas les sélecteurs CSS
+
+<!-- pause -->
+
+> **Réponse : C) Un refacto CSS ne cassera pas les tests E2E**
+> Les `data-testid` sont dédiés aux tests et découplés du style.
+
+<!-- end_slide -->
+
+<!-- jump_to_middle -->
+
+Bravo ! 🎉
+==========
