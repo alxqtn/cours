@@ -582,6 +582,8 @@ Ce qui distingue JS des langages "vraiment" OO (Ruby, Java, C#) :
 - `typeof monObjet` retourne `"object"`, pas le nom de la classe
 - Pour tester si un objet est une instance, il faut utiliser `instanceof`
 
+> JavaScript utilise un système de **prototypes** pour simuler l'orienté objet. C'est un sujet avancé. Si tu veux approfondir, cherche "JavaScript prototypes". Pour l'instant, retiens juste que `class` en JS est une façade qui cache ce mécanisme de prototype.
+
 ```typescript
 const hero = new Character("Alix", 100)
 typeof hero          // "object"
@@ -590,147 +592,15 @@ hero instanceof Character  // true
 
 <!-- pause -->
 
-Cependant, les principales fonctionnalités qui permettent de développer en orienté objet ont été implémentées en JavaScript/TypeScript et il est courant de voir des projets JavaScript utilisant de la POO, au moins à certains endroits.
+Cependant, les principales fonctionnalités qui permettent de développer en orienté objet ont été implémentées en JavaScript et il est courant de voir des projets JavaScript utilisant de la POO, au moins à certains endroits. Par ailleurs, TypeScript vient rajouter un certain nombre de fonctionnalités utiles en POO qu'on va voir par la suite.
 
 <!-- pause -->
-
-> JavaScript utilise un système de **prototypes** pour simuler l'orienté objet. C'est un sujet avancé. Si tu veux approfondir, cherche "JavaScript prototypes". Pour l'instant, retiens juste que `class` en JS est une façade qui cache ce mécanisme.
-
-<!-- end_slide -->
-
-Et TypeScript dans tout ça ?
-=============================
-
-TypeScript **compile vers JavaScript**. Tout ce qu'il ajoute disparaît à l'exécution.
-
-Mais pendant le développement, TypeScript apporte des outils pour mieux structurer ton code orienté objet :
-
-<!-- incremental_lists: true -->
-
-- Vérification des types à la compilation
-- `private`, `protected`, `public`, `readonly`
-- Getters et setters
-- `interface` et `implements`
-
-<!-- incremental_lists: false -->
-
-<!-- pause -->
-
-> TypeScript t'aide à **penser** en orienté objet et à éviter les erreurs, même si le JS produit n'a pas ces protections.
 
 <!-- end_slide -->
 
 <!-- jump_to_middle -->
 
 # Encapsulation avec TypeScript
-
-<!-- end_slide -->
-
-`private`, `public`, `protected`
-==================================
-
-```typescript
-class Character {
-  public name: string        // accessible partout (par défaut)
-  private hp: number         // accessible uniquement dans cette classe
-  protected attackPower: number  // accessible dans cette classe ET ses enfants
-}
-```
-
-<!-- pause -->
-
-En pratique :
-
-<!-- incremental_lists: true -->
-
-- `public` → ce qu'on expose à l'extérieur
-- `private` → les données internes qu'on protège
-- `protected` → accessible aux classes enfants (utile avec l'héritage)
-
-<!-- incremental_lists: false -->
-
-<!-- pause -->
-
-> Ces mots-clés disparaissent à la compilation. En JS, tout redevient accessible. Mais TypeScript t'empêche de tricher pendant le développement.
-
-<!-- end_slide -->
-
-`readonly` : empêcher la modification
-======================================
-
-```typescript
-class Character {
-  readonly name: string
-
-  constructor(name: string) {
-    this.name = name  // ✅ OK dans le constructeur
-  }
-
-  changeName(newName: string) {
-    hero.name = newName // ❌ Erreur : name est readonly
-  }
-}
-```
-
-<!-- pause -->
-
-`readonly` = assignable une seule fois, dans le constructeur. Après, c'est figé.
-
-Utile pour les identifiants, les configurations, tout ce qui ne doit pas changer.
-
-<!-- end_slide -->
-
-Getters et setters
-===================
-
-Parfois, on veut qu'un attribut soit visible à l'extérieur mais modifiable que dans la classe. Dans ce cas il nous faudra combiner `private` + un "getter"
-
-Un **getter** permet de lire une valeur calculée comme si c'était un attribut.
-
-```typescript
-class Character {
-  private _hp: number
-  private maxHp: number
-
-  get hp(): number {
-    return this._hp
-  }
-
-  get hpPercent(): number {
-    return (this._hp / this.maxHp) * 100
-  }
-}
-
-console.log(hero.hp)        // 80
-console.log(hero.hpPercent) // 80 (si maxHp = 100)
-```
-
-<!-- end_slide -->
-
-Setters : contrôler les modifications
-======================================
-
-Un **setter** permet de contrôler comment une valeur est modifiée.
-
-```typescript
-class Character {
-  private _hp: number
-
-  set hp(value: number) {
-    if (value < 0) {
-      this._hp = 0
-    } else {
-      this._hp = value
-    }
-  }
-}
-
-hero.hp = -50  // en réalité, _hp sera mis à 0
-```
-
-<!-- pause -->
-
-> Les getters/setters permettent d'exposer des "propriétés" tout en gardant le contrôle sur la lecture et l'écriture.
 
 <!-- end_slide -->
 
@@ -750,9 +620,167 @@ Un distributeur de billets :
 
 <!-- pause -->
 
-C'est exactement ça, l'encapsulation.
+C'est ça, l'encapsulation. L'objet expose des **méthodes publiques**, parfois des attributs bien définis, mais protège son état interne. Il contrôle ce qui est accessible de l'extérieur.
 
-L'objet expose des **méthodes publiques** bien définies. Son état interne est protégé.
+<!-- end_slide -->
+
+`private`, `public`, `protected`
+==================================
+
+On peut rajouter ces mots-clés devant n'importe quel attribut, ou méthode de la classe.
+
+```typescript
+class Character {
+  public name: string        // accessible partout (par défaut)
+  private hp: number         // accessible uniquement dans cette classe
+  protected attackPower: number  // accessible dans cette classe ET ses enfants
+
+  public isAlive() {
+    return hp > 0
+  }
+}
+```
+
+<!-- pause -->
+
+En pratique :
+
+<!-- incremental_lists: true -->
+
+- `public` → ce qu'on expose à l'extérieur : n'importe quel code peut appeler (méthode), lire ou modifier (attribut)
+- `private` → l'attribut ou la méthode ne sont accessibles qu'à l'intérieur de la classe
+- `protected` → pareil que private, mais accessible aussi aux classes enfants (avec l'héritage)
+
+Par défaut, tous les attributs et méthodes sont publics.
+
+<!-- incremental_lists: false -->
+
+<!-- pause -->
+
+> Ces mots-clés disparaissent à la compilation. En JS, tout redevient accessible. Mais TypeScript t'empêche de tricher pendant le développement.
+
+<!-- end_slide -->
+
+`readonly` : empêcher la modification
+======================================
+
+Parfois, un attribut n'a pas vocation à être modifié. On peut le marquer `readonly`.
+
+```typescript
+class Character {
+  readonly name: string
+
+  constructor(name: string) {
+    this.name = name  // ✅ OK dans le constructeur
+  }
+
+  changeName(newName: string) {
+    hero.name = newName // ❌ Erreur : name est readonly
+  }
+}
+```
+
+<!-- pause -->
+
+`readonly` = assignable une seule fois, dans le constructeur. Après, c'est figé. Ici, `name` peut être public, mais on peut se prémunir de sa modification par le reste du code.
+
+Utile pour les identifiants, les configurations, tout ce qui ne doit pas changer.
+
+<!-- end_slide -->
+
+Getters et setters
+===================
+
+Parfois, on veut qu'un attribut soit lisible à l'extérieur, mais modifiable que dans la classe. Dans ce cas il nous faudra combiner `private` + un "getter"
+
+Un **getter** permet aussi de lire une valeur calculée comme si c'était un attribut (computed values).
+
+Le code lit le getter comme un attribut (on utilise pas `hero.hp()` ici mais `hero.hp`), mais le code appelle la méthode pour avoir la valeur à jour.
+
+```typescript
+class Character {
+  private _hp: number // convention: _ devant un attribut dénote un état privé
+
+  get hp(): number { // on veut que le reste du code puisse lire hp
+    return this._hp
+  }
+
+  get isAlive(): boolean { // aussi pratique pour des valeurs calculées
+    return this._hp > 0
+  }
+}
+
+console.log(hero._hp)       // TypeScript sera rouge, inaccessible
+console.log(hero.hp)        // 80
+console.log(hero.isAlive)   // true
+```
+
+<!-- end_slide -->
+
+Setters : contrôler les modifications
+======================================
+
+On peut aussi souhaiter permettre la modification d'une valeur mais forcer le passage par une méthode, par exemple pour vérifier/valider la valeur avant d'accepter un état "corrompu".
+
+Un **setter** permet de contrôler comment une valeur est modifiée. Il est appelé quand on tente d'assigner avec `=`.
+
+```typescript
+class Character {
+  private _attackPower: number
+
+  set attackPower(value: number) {
+    if (value < 1) {
+      this._attackPower = 1
+    } else {
+      this._attackPower = value
+    }
+  }
+}
+
+hero._attackPower = 5 // impossible en TypeScript
+hero.attackPower = 5 // fonctionne comme attendu
+hero.attackPower = -50  // en réalité, _attackPower sera mis à 1
+```
+
+<!-- pause -->
+
+> Les getters/setters permettent d'exposer des "propriétés" tout en gardant le contrôle sur la lecture et l'écriture. Par défaut ils sont publics mais ils peuvent aussi être `protected` ou `private`.
+
+<!-- end_slide -->
+
+<!-- jump_to_middle -->
+
+# 🛠️ Exercice 3
+
+<!-- end_slide -->
+
+Exercice 3 — Encapsulation
+=============================
+
+**Étape 1 — Encapsuler vos classes existantes**
+
+Reprenez vos classes des exercices 1 et 2 et posez-vous ces questions :
+
+- **Film / Réalisatrice** : Le titre, la date de sortie, le nom d'une réalisatrice peuvent-ils changer après création ?
+- **Client** : Doit-on pouvoir faire `client.filmsEnLocation = []` directement ? Ou faut-il forcer le passage par `louerFilm()` ?
+- **Croiseur** : Que se passe-t-il si on fait `croiseur.personnesABord = 10000` ? Comment forcer le passage par `charger()` qui vérifie la capacité ?
+- **Intercepteur** : `nombreDeTirs` est un compteur interne. Doit-il être accessible de l'extérieur ?
+
+> Ajoutez `public`, `private`, `protected` et/ou `readonly` lorsque ça fait sens.
+
+<!-- pause -->
+
+**Étape 2 — Ajouter une note à la classe `Film`**
+
+- Ajoutez un attribut privé `_note`
+- Ajoutez un **getter** `note` qui retourne la valeur
+- Ajoutez un **setter** `note` qui vérifie que la note est entre 1 et 5 et assigne la valeur si elle est valide (sinon affiche une erreur)
+
+```typescript
+film.note = 4    // ✅ OK
+console.log(film.note)  // 4
+film.note = 10   // ❌ Erreur (note invalide)
+```
 
 <!-- end_slide -->
 
