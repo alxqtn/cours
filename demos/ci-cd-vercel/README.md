@@ -62,15 +62,56 @@ npm test
 
 ## Configuration Vercel
 
-1. Créer **2 projets** sur [vercel.com](https://vercel.com) : un pour l'API (`api/`), un pour le frontend (`web/`)
-2. Récupérer les identifiants :
-   - **VERCEL_TOKEN** : Settings > Tokens (un seul token pour les deux projets)
-   - **VERCEL_ORG_ID** : Settings > General > Your ID
-   - **VERCEL_API_PROJECT_ID** : Project Settings > General > Project ID (projet API)
-   - **VERCEL_WEB_PROJECT_ID** : Project Settings > General > Project ID (projet Web)
-3. Ajouter ces 4 valeurs comme **secrets** dans les paramètres de votre repo GitHub (Settings > Secrets and variables > Actions)
+### 1. Créer un token Vercel
 
-> `VITE_API_URL` est automatiquement déduit de l'URL de déploiement de l'API et passé au build du frontend par le workflow.
+- Aller sur [vercel.com/account/tokens](https://vercel.com/account/tokens)
+- Créer un token (par ex. `github-actions`) → c'est votre **VERCEL_TOKEN**
+
+### 2. Récupérer votre Org ID
+
+- Aller sur [vercel.com/account](https://vercel.com/account) > Settings > General
+- Copier **Your ID** → c'est votre **VERCEL_ORG_ID**
+
+### 3. Créer le projet API
+
+- Sur Vercel, cliquer **Add New Project** > **Import Git Repository**
+- Sélectionner votre repo, puis configurer :
+  - **Root Directory** : `demos/ci-cd-vercel/api`
+  - **Framework Preset** : `Other`
+  - **Build Command** : laisser vide (pas de build nécessaire, Vercel utilise `vercel.json`)
+  - **Output Directory** : laisser vide
+- Cliquer **Deploy** (le premier déploiement se fera via l'interface, les suivants via GitHub Actions)
+- Une fois créé, aller dans **Project Settings > General** et copier le **Project ID** → c'est votre **VERCEL_API_PROJECT_ID**
+
+### 4. Créer le projet Web
+
+- Sur Vercel, cliquer **Add New Project** > **Import Git Repository**
+- Sélectionner votre repo, puis configurer :
+  - **Root Directory** : `demos/ci-cd-vercel/web`
+  - **Framework Preset** : `Vite`
+  - **Build Command** : `npm run build` (par défaut)
+  - **Output Directory** : `dist` (par défaut)
+- Cliquer **Deploy**
+- Copier le **Project ID** dans Project Settings > General → c'est votre **VERCEL_WEB_PROJECT_ID**
+
+### 5. Désactiver le déploiement automatique de Vercel
+
+Par défaut, Vercel déploie automatiquement à chaque push. Comme c'est le workflow GitHub Actions qui gère le déploiement, il faut désactiver cette fonctionnalité pour les deux projets :
+
+- Project Settings > Git > **Connected Git Repository** > décocher **Auto-Deploy**
+
+### 6. Ajouter les secrets GitHub
+
+Dans votre repo GitHub, aller dans **Settings > Secrets and variables > Actions** et ajouter ces 4 secrets :
+
+| Secret                   | Valeur                     |
+| ------------------------ | -------------------------- |
+| `VERCEL_TOKEN`           | Le token créé à l'étape 1  |
+| `VERCEL_ORG_ID`          | Votre ID d'organisation    |
+| `VERCEL_API_PROJECT_ID`  | Project ID du projet API   |
+| `VERCEL_WEB_PROJECT_ID`  | Project ID du projet Web   |
+
+> `VITE_API_URL` est automatiquement déduit de l'URL de déploiement de l'API et passé au build du frontend par le workflow. Pas besoin de le configurer manuellement.
 
 ## Utilisation du workflow
 
