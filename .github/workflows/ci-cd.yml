@@ -49,6 +49,8 @@ jobs:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -57,15 +59,17 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
       - name: Deploy API to Vercel
-        run: vercel deploy --prod --yes --token ${{ secrets.VERCEL_TOKEN }}
+        id: deploy
+        run: |
+          URL=$(vercel deploy --prod --yes --token ${{ secrets.VERCEL_TOKEN }})
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
         working-directory: demos/ci-cd-vercel/api
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_API_PROJECT_ID }}
 
   deploy-web:
-    needs: ci
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: deploy-api
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,3 +84,4 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_WEB_PROJECT_ID }}
+          VITE_API_URL: ${{ needs.deploy-api.outputs.url }}

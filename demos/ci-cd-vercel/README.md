@@ -69,7 +69,8 @@ npm test
    - **VERCEL_API_PROJECT_ID** : Project Settings > General > Project ID (projet API)
    - **VERCEL_WEB_PROJECT_ID** : Project Settings > General > Project ID (projet Web)
 3. Ajouter ces 4 valeurs comme **secrets** dans les paramètres de votre repo GitHub (Settings > Secrets and variables > Actions)
-4. Dans le projet Web sur Vercel, ajouter la variable d'environnement `VITE_API_URL` pointant vers l'URL de l'API déployée
+
+> `VITE_API_URL` est automatiquement déduit de l'URL de déploiement de l'API et passé au build du frontend par le workflow.
 
 ## Utilisation du workflow
 
@@ -87,7 +88,7 @@ Le workflow :
 - **Intégration Continue (CI)** : vérification automatique du code à chaque changement (lint + tests)
 - **Déploiement Continu (CD)** : déploiement automatique en production après validation
 - **Séparation CI / CD** : les déploiements dépendent du succès de la CI (`needs: ci`)
-- **Jobs parallèles** : l'API et le frontend sont déployés en parallèle après la CI
+- **Chaînage de jobs avec outputs** : l'URL de l'API déployée est passée automatiquement au build du frontend
 - **Déploiement conditionnel** : seuls les pushs sur `main` déclenchent le déploiement (`if:`)
 - **Filtres de chemins** : le workflow ne s'exécute que si les fichiers concernés changent (`paths:`)
 - **Monorepo simple** : un workflow qui gère plusieurs projets avec `working-directory`
