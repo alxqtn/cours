@@ -1,0 +1,82 @@
+name: CI / CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "demos/ci-cd-vercel/**"
+      - ".github/workflows/ci-cd.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "demos/ci-cd-vercel/**"
+      - ".github/workflows/ci-cd.yml"
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: |
+            demos/ci-cd-vercel/api/package-lock.json
+            demos/ci-cd-vercel/web/package-lock.json
+
+      - name: "API: Install"
+        run: npm ci
+        working-directory: demos/ci-cd-vercel/api
+      - name: "API: Lint"
+        run: npm run lint
+        working-directory: demos/ci-cd-vercel/api
+      - name: "API: Test"
+        run: npm test
+        working-directory: demos/ci-cd-vercel/api
+
+      - name: "Web: Install"
+        run: npm ci
+        working-directory: demos/ci-cd-vercel/web
+      - name: "Web: Lint"
+        run: npm run lint
+        working-directory: demos/ci-cd-vercel/web
+      - name: "Web: Test"
+        run: npm test
+        working-directory: demos/ci-cd-vercel/web
+
+  deploy-api:
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+      - name: Deploy API to Vercel
+        run: vercel deploy --prod --yes --token ${{ secrets.VERCEL_TOKEN }}
+        working-directory: demos/ci-cd-vercel/api
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_API_PROJECT_ID }}
+
+  deploy-web:
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+      - name: Deploy Web to Vercel
+        run: vercel deploy --prod --yes --token ${{ secrets.VERCEL_TOKEN }}
+        working-directory: demos/ci-cd-vercel/web
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_WEB_PROJECT_ID }}
