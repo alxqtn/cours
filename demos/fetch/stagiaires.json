@@ -1,0 +1,8 @@
+[
+  {"id": 1, "prenom": "Léna", "nom": "Henry", "age": 30, "promo": {"id": 1, "nom": "Promo Paris - Février 2024"}},
+  {"id": 2, "prenom": "Lucas", "nom": "Nicolas", "age": 26, "promo": {"id": 1, "nom": "Promo Paris - Février 2024"}},
+  {"id": 3, "prenom": "Emma", "nom": "Leroy", "age": 35, "promo": {"id": 1, "nom": "Promo Paris - Février 2024"}},
+  {"id": 4, "prenom": "Noah", "nom": "Muller", "age": 31, "promo": {"id": 1, "nom": "Promo Paris - Février 2024"}},
+  {"id": 5, "prenom": "Yanis", "nom": "Garcia", "age": 37, "promo": {"id": 1, "nom": "Promo Paris - Février 2024"}},
+  {"id": 6, "prenom": "Adam", "nom": "Dubois", "age": 43, "promo": {"id": 1, "nom": "Promo Paris - Février 2024"}}
+]
